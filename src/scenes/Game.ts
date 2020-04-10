@@ -175,7 +175,7 @@ export default class Demo extends Phaser.Scene {
   }
 
   placeItem(pointer, localX, localY) {
-    if (!this.selectedItem) return;
+    if (!this.selectedItem || this.uiBlocked) return;
 
     const placedItem = this.add.sprite(
       localX,
