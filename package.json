@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/geocine/phaser3-rollup-typescript.git"
+    "url": "git+https://github.com/geocine/phaser3-virtual-pet.git"
   },
   "author": "Aivan Monceller",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/geocine/phaser3-rollup-typescript/issues"
+    "url": "https://github.com/geocine/phaser3-virtual-pet/issues"
   },
-  "homepage": "https://github.com/geocine/phaser3-rollup-typescript#readme",
+  "homepage": "https://github.com/geocine/phaser3-virtual-pet#readme",
   "devDependencies": {
     "@rollup/plugin-alias": "^3.0.1",
     "@rollup/plugin-node-resolve": "^7.1.1",
