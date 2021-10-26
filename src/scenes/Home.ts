@@ -1,5 +1,5 @@
 // @ts-nocheck
-import 'phaser';
+import Phaser from 'phaser';
 
 export default class Demo extends Phaser.Scene {
   constructor() {
@@ -13,7 +13,7 @@ export default class Demo extends Phaser.Scene {
     const gameHeight = this.sys.game.config.height;
     const text = this.add.text(gameWidth / 2, gameHeight / 2, 'Virtual Pet', {
       font: '40px Arial',
-      fill: '#ffffff',
+      fill: '#ffffff'
     });
     text.setOrigin(0.5, 0.5);
     text.setDepth(1);
