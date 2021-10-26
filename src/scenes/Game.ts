@@ -1,7 +1,24 @@
-// @ts-nocheck
-import Phaser from 'phaser';
+import Phaser, { GameObjects } from 'phaser';
+
+interface Stats {
+  health?: number;
+  fun?: number;
+}
+
+interface SpriteWithStats extends GameObjects.Sprite {
+  customStats?: Stats;
+}
 
 export default class Demo extends Phaser.Scene {
+  private stats: Stats;
+  private decayRates: Stats;
+  private pet: GameObjects.Sprite;
+  private buttons: SpriteWithStats[];
+  private uiBlocked: boolean;
+  private healthText: GameObjects.Text;
+  private funText: GameObjects.Text;
+  private selectedItem: SpriteWithStats | null;
+
   constructor() {
     super('GameScene');
   }
@@ -28,17 +45,25 @@ export default class Demo extends Phaser.Scene {
     this.input.setDraggable(this.pet);
 
     // follow pointer (mouse/finger) when dragging
-    this.input.on('drag', (_, gameObject, dragX, dragY) => {
-      gameObject.x = dragX;
-      gameObject.y = dragY;
-    });
+    this.input.on(
+      'drag',
+      (
+        _: Phaser.Input.Pointer,
+        gameObject: Phaser.GameObjects.Sprite,
+        dragX: number,
+        dragY: number
+      ) => {
+        gameObject.x = dragX;
+        gameObject.y = dragY;
+      }
+    );
 
     this.createUi();
 
     this.createHud();
     this.refreshHud();
 
-    this.timedEventStats = this.time.addEvent({
+    this.time.addEvent({
       delay: 1000,
       repeat: -1,
       callback: () => {
@@ -48,21 +73,29 @@ export default class Demo extends Phaser.Scene {
   }
 
   createUi() {
-    const appleButton = this.add.sprite(72, 570, 'apple').setInteractive();
+    const appleButton: SpriteWithStats = this.add
+      .sprite(72, 570, 'apple')
+      .setInteractive();
     appleButton.customStats = { health: 20, fun: 0 };
-    appleButton.on('pointerdown', this.pickItem);
+    appleButton.on('pointerdown', () => this.pickItem(appleButton));
 
-    const candyButton = this.add.sprite(144, 570, 'candy').setInteractive();
+    const candyButton: SpriteWithStats = this.add
+      .sprite(144, 570, 'candy')
+      .setInteractive();
     candyButton.customStats = { health: -10, fun: 10 };
-    candyButton.on('pointerdown', this.pickItem);
+    candyButton.on('pointerdown', () => this.pickItem(candyButton));
 
-    const toyButton = this.add.sprite(216, 570, 'toy').setInteractive();
+    const toyButton: SpriteWithStats = this.add
+      .sprite(216, 570, 'toy')
+      .setInteractive();
     toyButton.customStats = { health: 0, fun: 15 };
-    toyButton.on('pointerdown', this.pickItem);
+    toyButton.on('pointerdown', () => this.pickItem(toyButton));
 
-    const rotateButton = this.add.sprite(288, 570, 'rotate').setInteractive();
+    const rotateButton: SpriteWithStats = this.add
+      .sprite(288, 570, 'rotate')
+      .setInteractive();
     rotateButton.customStats = { fun: 20 };
-    rotateButton.on('pointerdown', this.rotatePet);
+    rotateButton.on('pointerdown', () => this.rotatePet(rotateButton));
 
     this.buttons = [appleButton, candyButton, toyButton, rotateButton];
 
@@ -75,13 +108,13 @@ export default class Demo extends Phaser.Scene {
     // health stat
     this.healthText = this.add.text(20, 20, 'Health: ', {
       font: '24px Arial',
-      fill: '#ffffff'
+      color: '#ffffff'
     });
 
     // fun stat
     this.funText = this.add.text(170, 20, 'Fun: ', {
       font: '24px Arial',
-      fill: '#ffffff'
+      color: '#ffffff'
     });
   }
 
@@ -90,7 +123,7 @@ export default class Demo extends Phaser.Scene {
     this.funText.setText('Fun: ' + this.stats.fun);
   }
 
-  updateStats(statDiff) {
+  updateStats(statDiff: Stats) {
     // manually update each stat
     // this.stats.health += statDiff.health;
     // this.stats.fun += statDiff.fun;
@@ -101,12 +134,14 @@ export default class Demo extends Phaser.Scene {
     // more flexible
     for (const stat in statDiff) {
       if (statDiff.hasOwnProperty(stat)) {
-        this.stats[stat] += statDiff[stat];
+        this.stats[stat as keyof Stats] =
+          (this.stats[stat as keyof Stats] || 0) +
+          (statDiff[stat as keyof Stats] || 0);
 
         // stats can't be less than zero
-        if (this.stats[stat] < 0) {
+        if ((this.stats[stat as keyof Stats] || 0) < 0) {
           isGameOver = true;
-          this.stats[stat] = 0;
+          this.stats[stat as keyof Stats] = 0;
         }
       }
     }
@@ -119,10 +154,10 @@ export default class Demo extends Phaser.Scene {
   }
 
   gameOver() {
-    this.uiBloced = true;
+    this.uiBlocked = true;
     this.pet.setFrame(4);
 
-    this.timedEventStats = this.time.addEvent({
+    this.time.addEvent({
       delay: 2000,
       repeat: 0,
       callback: () => {
@@ -133,48 +168,48 @@ export default class Demo extends Phaser.Scene {
     console.log('game over');
   }
 
-  rotatePet() {
+  rotatePet(rotate: SpriteWithStats) {
     // note this context here is for pointerdown
-    if (this.scene.uiBlocked) return;
+    if (this.uiBlocked) return;
 
-    this.scene.uiReady();
+    this.uiReady();
 
-    this.scene.uiBlocked = true;
+    this.uiBlocked = true;
 
-    this.alpha = 0.5;
+    rotate.alpha = 0.5;
 
-    this.scene.tweens.add({
-      targets: this.scene.pet,
+    this.tweens.add({
+      targets: this.pet,
       duration: 600,
       angle: 360,
       pause: false,
       onComplete: () => {
-        this.scene.updateStats(this.customStats);
+        this.updateStats(rotate.customStats || {});
 
-        this.scene.uiReady();
+        this.uiReady();
 
-        this.scene.refreshHud();
+        this.refreshHud();
       }
     });
 
-    console.log(this.scene.stats);
+    console.log(this.stats);
     console.log('we are rotating the pet');
   }
 
-  pickItem() {
+  pickItem = (item: SpriteWithStats) => {
     // note this context here is for pointerdown
-    if (this.scene.uiBlocked) return;
+    if (this.uiBlocked) return;
 
-    this.scene.uiReady();
+    this.uiReady();
 
-    this.scene.selectedItem = this;
+    this.selectedItem = item;
 
-    this.alpha = 0.5;
+    item.alpha = 0.5;
 
-    console.log('we are picking an item', this.texture.key);
-  }
+    console.log('we are picking an item', item.texture.key);
+  };
 
-  placeItem(pointer, localX, localY) {
+  placeItem(pointer: Phaser.Input.Pointer, localX: number, localY: number) {
     if (!this.selectedItem || this.uiBlocked) return;
 
     const placedItem = this.add.sprite(
@@ -196,7 +231,7 @@ export default class Demo extends Phaser.Scene {
         this.pet.play('funnyfaces');
 
         // clear UI
-        this.updateStats(this.selectedItem.customStats);
+        this.updateStats(this.selectedItem?.customStats || {});
 
         this.pet.on('animationcomplete', () => {
           this.pet.setFrame(0);
@@ -207,7 +242,6 @@ export default class Demo extends Phaser.Scene {
       }
     });
   }
-
   uiReady() {
     this.selectedItem = null;
 

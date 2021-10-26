@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Phaser from 'phaser';
 
 export default class Demo extends Phaser.Scene {
@@ -9,11 +8,11 @@ export default class Demo extends Phaser.Scene {
   create() {
     const bg = this.add.sprite(0, 0, 'backyard').setInteractive();
     bg.setOrigin(0, 0);
-    const gameWidth = this.sys.game.config.width;
-    const gameHeight = this.sys.game.config.height;
+    const gameWidth: number = this.sys.game.config.width as number;
+    const gameHeight: number = this.sys.game.config.height as number;
     const text = this.add.text(gameWidth / 2, gameHeight / 2, 'Virtual Pet', {
       font: '40px Arial',
-      fill: '#ffffff'
+      color: '#ffffff'
     });
     text.setOrigin(0.5, 0.5);
     text.setDepth(1);
