@@ -1,4 +1,3 @@
-// @ts-nocheck
 import 'phaser';
 
 export default class Demo extends Phaser.Scene {
@@ -35,7 +34,7 @@ export default class Demo extends Phaser.Scene {
   }
 
   showProgress() {
-    this.add.sprite(this.sys.game.config.width / 2, 250, 'logo');
+    this.add.sprite((this.sys.game.config.width as number) / 2, 250, 'logo');
 
     let bgBar = this.add.graphics();
 
@@ -43,20 +42,20 @@ export default class Demo extends Phaser.Scene {
     let barH = 30;
 
     bgBar.setPosition(
-      this.sys.game.config.width / 2 - barW / 2,
-      this.sys.game.config.height / 2 - barH / 2
+      (this.sys.game.config.width as number) / 2 - barW / 2,
+      (this.sys.game.config.height as number) / 2 - barH / 2
     );
     bgBar.fillStyle(0xf5f5f5, 1);
     bgBar.fillRect(0, 0, barW, barH);
 
     const progressBar = this.add.graphics();
     progressBar.setPosition(
-      this.sys.game.config.width / 2 - barW / 2,
-      this.sys.game.config.height / 2 - barH / 2
+      (this.sys.game.config.width as number) / 2 - barW / 2,
+      (this.sys.game.config.height as number) / 2 - barH / 2
     );
 
     // listen to the "progress" event
-    this.load.on('progress', (value) => {
+    this.load.on('progress', (value: number) => {
       // clearing progress bar (so we can draw it again)
       progressBar.clear();
 
