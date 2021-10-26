@@ -19,7 +19,7 @@ export default class Demo extends Phaser.Scene {
       frameWidth: 97,
       frameHeight: 83,
       margin: 1,
-      spacing: 1,
+      spacing: 1
     });
   }
 
@@ -28,7 +28,7 @@ export default class Demo extends Phaser.Scene {
       key: 'funnyfaces',
       frames: this.anims.generateFrameNames('pet', { frames: [1, 2, 3] }),
       yoyo: true,
-      repeat: 0,
+      repeat: 0
     });
 
     this.scene.start('HomeScene');

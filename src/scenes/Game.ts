@@ -1,5 +1,5 @@
 // @ts-nocheck
-import 'phaser';
+import Phaser from 'phaser';
 
 export default class Demo extends Phaser.Scene {
   constructor() {
@@ -9,12 +9,12 @@ export default class Demo extends Phaser.Scene {
   init() {
     this.stats = {
       health: 100,
-      fun: 100,
+      fun: 100
     };
 
     this.decayRates = {
       health: -5,
-      fun: -2,
+      fun: -2
     };
   }
 
@@ -43,7 +43,7 @@ export default class Demo extends Phaser.Scene {
       repeat: -1,
       callback: () => {
         this.updateStats(this.decayRates);
-      },
+      }
     });
   }
 
@@ -75,13 +75,13 @@ export default class Demo extends Phaser.Scene {
     // health stat
     this.healthText = this.add.text(20, 20, 'Health: ', {
       font: '24px Arial',
-      fill: '#ffffff',
+      fill: '#ffffff'
     });
 
     // fun stat
     this.funText = this.add.text(170, 20, 'Fun: ', {
       font: '24px Arial',
-      fill: '#ffffff',
+      fill: '#ffffff'
     });
   }
 
@@ -127,7 +127,7 @@ export default class Demo extends Phaser.Scene {
       repeat: 0,
       callback: () => {
         this.scene.start('HomeScene');
-      },
+      }
     });
 
     console.log('game over');
@@ -154,7 +154,7 @@ export default class Demo extends Phaser.Scene {
         this.scene.uiReady();
 
         this.scene.refreshHud();
-      },
+      }
     });
 
     console.log(this.scene.stats);
@@ -204,7 +204,7 @@ export default class Demo extends Phaser.Scene {
 
           this.refreshHud();
         });
-      },
+      }
     });
   }
 
