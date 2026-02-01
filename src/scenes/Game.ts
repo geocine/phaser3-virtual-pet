@@ -228,17 +228,25 @@ export default class Demo extends Phaser.Scene {
       paused: false,
       onComplete: () => {
         placedItem.destroy();
-        this.pet.play('funnyfaces');
+        const finishEating = () => {
+          this.pet.setFrame(0);
+          this.uiReady();
+          this.refreshHud();
+        };
 
         // clear UI
         this.updateStats(this.selectedItem?.customStats || {});
 
-        this.pet.on('animationcomplete', () => {
-          this.pet.setFrame(0);
-          this.uiReady();
+        this.pet.once(
+          Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'funnyfaces',
+          finishEating
+        );
+        this.pet.play('funnyfaces');
 
-          this.refreshHud();
-        });
+        // Fallback if the animation didn't start (e.g., missing key)
+        if (!this.pet.anims.isPlaying) {
+          finishEating();
+        }
       }
     });
   }

@@ -1,27 +1,28 @@
-<h1 align="center">
-  <br>
-  <a href="https://github.com/geocine/phaser3-rollup-typescript#readme"><img src="https://raw.githubusercontent.com/geocine/phaser3-virtual-pet/master/public/assets/phaser3-logo.png" alt="header"/></a>
-  <br>
-  Phaser 3 Virtual Pet
-  <br>
-</h1>
+﻿# Phaser 3 Virtual Pet
 
-This is a game built with [Phaser 3](https://github.com/photonstorm/phaser), with [TypeScript](https://www.typescriptlang.org/), [Rollup](https://rollupjs.org) with ⚡️ lightning fast HMR through [Vite](https://vitejs.dev/).
+Take care of a virtual pet by feeding it, playing with it, and keeping its stats above zero.
+
+## Gameplay
+
+- Click an item button (apple, candy, toy) at the bottom to select it.
+- Click anywhere on the yard to place the item.
+- The pet walks over and eats/plays, updating Health or Fun.
+- Use the rotate button for a quick fun boost.
+- Health and fun decay over time; if any reaches zero the game returns to the home screen.
 
 ## Available Commands
 
 | Command | Description |
 |---------|-------------|
 | `yarn install` | Install project dependencies |
-| `yarn dev` | Builds project and open web server, watching for changes |
-| `yarn build` | Builds code bundle with production settings  |
-| `yarn serve` | Run a web server to serve built code bundle |
+| `yarn dev` | Start the dev server with hot reload |
+| `yarn build` | Build the production bundle |
+| `yarn serve` | Preview the production build |
 
 ## Development
 
-After cloning the repo, run `yarn install` from your project directory. Then, you can start the local development
-server by running `yarn dev` and navigate to http://localhost:3000.
+After cloning the repo, run `yarn install` and then `yarn dev`. The game will be available at http://localhost:5173.
 
 ## Production
 
-After running `yarn build`, the files you need for production will be on the `dist` folder. To test code on your `dist` folder, run `yarn serve` and navigate to http://localhost:5000
+Run `yarn build` to create the `dist` folder. Use `yarn serve` to preview it at http://localhost:4173.
