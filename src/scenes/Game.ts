@@ -12,11 +12,13 @@ interface SpriteWithStats extends GameObjects.Sprite {
 export default class Demo extends Phaser.Scene {
   private stats: Stats;
   private decayRates: Stats;
+  private maxStats: Stats;
   private pet: GameObjects.Sprite;
   private buttons: SpriteWithStats[];
   private uiBlocked: boolean;
   private healthText: GameObjects.Text;
   private funText: GameObjects.Text;
+  private healthHudWidth: number;
   private selectedItem: SpriteWithStats | null;
 
   constructor() {
@@ -32,6 +34,11 @@ export default class Demo extends Phaser.Scene {
     this.decayRates = {
       health: -5,
       fun: -2
+    };
+
+    this.maxStats = {
+      health: 100,
+      fun: 100
     };
   }
 
@@ -111,16 +118,33 @@ export default class Demo extends Phaser.Scene {
       color: '#ffffff'
     });
 
-    // fun stat
-    this.funText = this.add.text(170, 20, 'Fun: ', {
-      font: '24px Arial',
-      color: '#ffffff'
-    });
+    // Reserve space for "Health: 000/000" so the Fun label doesn't shift as values change.
+    const healthTemplate = 'Health: 000/000';
+    this.healthText.setText(healthTemplate);
+    this.healthHudWidth = this.healthText.width;
+    this.healthText.setFixedSize(this.healthHudWidth, this.healthText.height);
+
+    // fun stat (positioned using the reserved health width)
+    this.funText = this.add.text(
+      this.healthText.x + this.healthHudWidth + 8,
+      20,
+      'Fun: ',
+      {
+        font: '24px Arial',
+        color: '#ffffff'
+      }
+    );
   }
 
   refreshHud() {
-    this.healthText.setText('Health: ' + this.stats.health);
-    this.funText.setText('Fun: ' + this.stats.fun);
+    this.healthText.setText(
+      'Health: ' + this.stats.health + '/' + this.maxStats.health
+    );
+
+    // Keep Fun anchored relative to a reserved width (prevents shifting as Health changes).
+    this.funText.setX(this.healthText.x + this.healthHudWidth + 8);
+
+    this.funText.setText('Fun: ' + this.stats.fun + '/' + this.maxStats.fun);
   }
 
   updateStats(statDiff: Stats) {
@@ -142,6 +166,15 @@ export default class Demo extends Phaser.Scene {
         if ((this.stats[stat as keyof Stats] || 0) < 0) {
           isGameOver = true;
           this.stats[stat as keyof Stats] = 0;
+        }
+
+        // clamp stats so "good" actions don't inflate forever
+        const max = this.maxStats[stat as keyof Stats];
+        if (
+          typeof max === 'number' &&
+          (this.stats[stat as keyof Stats] || 0) > max
+        ) {
+          this.stats[stat as keyof Stats] = max;
         }
       }
     }
