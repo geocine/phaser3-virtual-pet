@@ -18,6 +18,7 @@ export default class Demo extends Phaser.Scene {
   private uiBlocked: boolean;
   private healthText: GameObjects.Text;
   private funText: GameObjects.Text;
+  private hintText: GameObjects.Text;
   private healthHudWidth: number;
   private selectedItem: SpriteWithStats | null;
 
@@ -134,6 +135,12 @@ export default class Demo extends Phaser.Scene {
         color: '#ffffff'
       }
     );
+
+    this.hintText = this.add.text(20, 52, 'Tap an item to select it.', {
+      font: '16px Arial',
+      color: '#ffffff'
+    });
+    this.hintText.setAlpha(1);
   }
 
   refreshHud() {
@@ -233,17 +240,28 @@ export default class Demo extends Phaser.Scene {
     // note this context here is for pointerdown
     if (this.uiBlocked) return;
 
+    // Toggle off if tapping the already-selected item.
+    if (this.selectedItem === item) {
+      this.uiReady();
+      return;
+    }
+
     this.uiReady();
 
     this.selectedItem = item;
 
     item.alpha = 0.5;
+    this.hintText?.setText('Tap on the yard to place it.');
+    this.hintText?.setAlpha(1);
 
     console.log('we are picking an item', item.texture.key);
   };
 
   placeItem(pointer: Phaser.Input.Pointer, localX: number, localY: number) {
     if (!this.selectedItem || this.uiBlocked) return;
+
+    // Prevent placing items over the bottom UI bar.
+    if (localY > 520) return;
 
     const placedItem = this.add.sprite(
       localX,
@@ -285,6 +303,8 @@ export default class Demo extends Phaser.Scene {
   }
   uiReady() {
     this.selectedItem = null;
+    this.hintText?.setText('Tap an item to select it.');
+    this.hintText?.setAlpha(1);
 
     for (let i = 0; i < this.buttons.length; i++) {
       this.buttons[i].alpha = 1;
