@@ -221,9 +221,13 @@ export default class Demo extends Phaser.Scene {
     this.tweens.add({
       targets: this.pet,
       duration: 600,
-      angle: 360,
+      // Use a relative angle so repeat presses always animate.
+      angle: '+=360',
       pause: false,
       onComplete: () => {
+        // Keep the angle from growing without bound.
+        this.pet.angle = ((this.pet.angle % 360) + 360) % 360;
+
         this.updateStats(rotate.customStats || {});
 
         this.uiReady();
