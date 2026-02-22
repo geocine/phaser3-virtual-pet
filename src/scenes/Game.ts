@@ -21,6 +21,8 @@ export default class Demo extends Phaser.Scene {
   private hintText: GameObjects.Text;
   private healthHudWidth: number;
   private selectedItem: SpriteWithStats | null;
+  private decayTimer?: Phaser.Time.TimerEvent;
+  private pausedByBlur: boolean;
 
   constructor() {
     super('GameScene');
@@ -41,6 +43,8 @@ export default class Demo extends Phaser.Scene {
       health: 100,
       fun: 100
     };
+
+    this.pausedByBlur = false;
   }
 
   create() {
@@ -71,12 +75,21 @@ export default class Demo extends Phaser.Scene {
     this.createHud();
     this.refreshHud();
 
-    this.time.addEvent({
+    this.decayTimer = this.time.addEvent({
       delay: 1000,
       repeat: -1,
       callback: () => {
         this.updateStats(this.decayRates);
       }
+    });
+
+    // Pause stat decay when the tab/app loses focus.
+    this.game.events.on(Phaser.Core.Events.BLUR, this.onBlur, this);
+    this.game.events.on(Phaser.Core.Events.FOCUS, this.onFocus, this);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(Phaser.Core.Events.BLUR, this.onBlur, this);
+      this.game.events.off(Phaser.Core.Events.FOCUS, this.onFocus, this);
     });
   }
 
@@ -110,6 +123,37 @@ export default class Demo extends Phaser.Scene {
     this.uiBlocked = false;
 
     this.uiReady();
+  }
+
+  private onBlur() {
+    // Avoid re-pausing if we already paused due to blur.
+    if (this.pausedByBlur) return;
+
+    if (this.decayTimer) {
+      this.decayTimer.paused = true;
+    }
+
+    this.pausedByBlur = true;
+    this.hintText?.setText('Paused (app inactive).');
+    this.hintText?.setAlpha(1);
+  }
+
+  private onFocus() {
+    if (!this.pausedByBlur) return;
+
+    if (this.decayTimer) {
+      this.decayTimer.paused = false;
+    }
+
+    this.pausedByBlur = false;
+
+    // Restore the default hint unless the user has an item selected.
+    if (this.selectedItem) {
+      this.hintText?.setText('Tap on the yard to place it.');
+    } else {
+      this.hintText?.setText('Tap an item to select it.');
+    }
+    this.hintText?.setAlpha(1);
   }
 
   createHud() {
