@@ -75,6 +75,8 @@ export default class Demo extends Phaser.Scene {
     this.createHud();
     this.refreshHud();
 
+    this.bindKeyboardShortcuts();
+
     this.decayTimer = this.time.addEvent({
       delay: 1000,
       repeat: -1,
@@ -125,6 +127,41 @@ export default class Demo extends Phaser.Scene {
     this.uiReady();
   }
 
+  private bindKeyboardShortcuts() {
+    const keyboard = this.input.keyboard;
+    if (!keyboard) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (this.uiBlocked) return;
+
+      switch (event.code) {
+        case 'Digit1':
+          this.pickItem(this.buttons[0]);
+          break;
+        case 'Digit2':
+          this.pickItem(this.buttons[1]);
+          break;
+        case 'Digit3':
+          this.pickItem(this.buttons[2]);
+          break;
+        case 'Digit4':
+          this.rotatePet(this.buttons[3]);
+          break;
+        case 'Escape':
+          this.uiReady();
+          break;
+        default:
+          break;
+      }
+    };
+
+    keyboard.on('keydown', onKeyDown);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keyboard.off('keydown', onKeyDown);
+    });
+  }
+
   private onBlur() {
     // Avoid re-pausing if we already paused due to blur.
     if (this.pausedByBlur) return;
@@ -151,7 +188,7 @@ export default class Demo extends Phaser.Scene {
     if (this.selectedItem) {
       this.hintText?.setText('Tap on the yard to place it.');
     } else {
-      this.hintText?.setText('Tap an item to select it.');
+      this.hintText?.setText('Tap an item (or press 1-4) to select it.');
     }
     this.hintText?.setAlpha(1);
   }
@@ -180,7 +217,7 @@ export default class Demo extends Phaser.Scene {
       }
     );
 
-    this.hintText = this.add.text(20, 52, 'Tap an item to select it.', {
+    this.hintText = this.add.text(20, 52, 'Tap an item (or press 1-4) to select it.', {
       font: '16px Arial',
       color: '#ffffff'
     });
@@ -351,7 +388,7 @@ export default class Demo extends Phaser.Scene {
   }
   uiReady() {
     this.selectedItem = null;
-    this.hintText?.setText('Tap an item to select it.');
+    this.hintText?.setText('Tap an item (or press 1-4) to select it.');
     this.hintText?.setAlpha(1);
 
     for (let i = 0; i < this.buttons.length; i++) {
