@@ -21,6 +21,7 @@ export default class Demo extends Phaser.Scene {
   private hintText: GameObjects.Text;
   private healthHudWidth: number;
   private selectedItem: SpriteWithStats | null;
+  private placementPreview: GameObjects.Sprite | null;
   private decayTimer?: Phaser.Time.TimerEvent;
   private pausedByBlur: boolean;
 
@@ -45,12 +46,37 @@ export default class Demo extends Phaser.Scene {
     };
 
     this.pausedByBlur = false;
+    this.placementPreview = null;
   }
 
   create() {
     const bg = this.add.sprite(0, 0, 'backyard').setInteractive();
     bg.setOrigin(0, 0);
     bg.on('pointerdown', this.placeItem, this);
+
+    const onPointerMove = (pointer: Phaser.Input.Pointer) => {
+      if (!this.selectedItem || this.uiBlocked || !this.placementPreview) return;
+
+      const x = pointer.worldX;
+      const y = pointer.worldY;
+      this.placementPreview.setPosition(x, y);
+
+      const isValid = y <= 520;
+      if (isValid) {
+        this.placementPreview.clearTint();
+        this.placementPreview.setAlpha(0.6);
+      } else {
+        this.placementPreview.setTint(0xff4444);
+        this.placementPreview.setAlpha(0.35);
+      }
+    };
+
+    this.input.on('pointermove', onPointerMove);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off('pointermove', onPointerMove);
+    });
+
     this.pet = this.add.sprite(100, 200, 'pet').setInteractive();
     // this.pet.depth = 1;
     // make pet draggable
@@ -335,6 +361,16 @@ export default class Demo extends Phaser.Scene {
 
     this.selectedItem = item;
 
+    if (this.placementPreview) {
+      this.placementPreview.destroy();
+      this.placementPreview = null;
+    }
+
+    // Create a small placement preview that follows the pointer.
+    this.placementPreview = this.add
+      .sprite(this.pet.x, this.pet.y, item.texture.key)
+      .setAlpha(0.6);
+
     item.alpha = 0.5;
     this.hintText?.setText('Tap on the yard to place it.');
     this.hintText?.setAlpha(1);
@@ -350,7 +386,25 @@ export default class Demo extends Phaser.Scene {
     const worldY = pointer.worldY;
 
     // Prevent placing items over the bottom UI bar.
-    if (worldY > 520) return;
+    if (worldY > 520) {
+      this.hintText?.setText('Place it above the toolbar.');
+      this.hintText?.setAlpha(1);
+      this.time.delayedCall(1000, () => {
+        if (this.selectedItem) {
+          this.hintText?.setText('Tap on the yard to place it.');
+        } else {
+          this.hintText?.setText('Tap an item (or press 1-4) to select it.');
+        }
+        this.hintText?.setAlpha(1);
+      });
+      return;
+    }
+
+    // Clear the preview once the item is successfully placed.
+    if (this.placementPreview) {
+      this.placementPreview.destroy();
+      this.placementPreview = null;
+    }
 
     const placedItem = this.add.sprite(
       worldX,
@@ -392,6 +446,12 @@ export default class Demo extends Phaser.Scene {
   }
   uiReady() {
     this.selectedItem = null;
+
+    if (this.placementPreview) {
+      this.placementPreview.destroy();
+      this.placementPreview = null;
+    }
+
     this.hintText?.setText('Tap an item (or press 1-4) to select it.');
     this.hintText?.setAlpha(1);
 
