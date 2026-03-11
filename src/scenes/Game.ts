@@ -342,15 +342,19 @@ export default class Demo extends Phaser.Scene {
     console.log('we are picking an item', item.texture.key);
   };
 
-  placeItem(pointer: Phaser.Input.Pointer, localX: number, localY: number) {
+  placeItem(pointer: Phaser.Input.Pointer) {
     if (!this.selectedItem || this.uiBlocked) return;
 
+    // Use world coordinates so placement remains correct with scaling / transforms.
+    const worldX = pointer.worldX;
+    const worldY = pointer.worldY;
+
     // Prevent placing items over the bottom UI bar.
-    if (localY > 520) return;
+    if (worldY > 520) return;
 
     const placedItem = this.add.sprite(
-      localX,
-      localY,
+      worldX,
+      worldY,
       this.selectedItem.texture.key
     );
 
@@ -359,8 +363,8 @@ export default class Demo extends Phaser.Scene {
     this.tweens.add({
       targets: this.pet,
       duration: 500,
-      x: localX,
-      y: localY,
+      x: worldX,
+      y: worldY,
       paused: false,
       onComplete: () => {
         placedItem.destroy();
