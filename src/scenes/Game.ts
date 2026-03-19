@@ -1,4 +1,5 @@
 import Phaser, { GameObjects } from 'phaser';
+import { GAME_HEIGHT, GAME_WIDTH, TOOLBAR_TOP } from '../config';
 
 interface Stats {
   health?: number;
@@ -61,7 +62,7 @@ export default class Demo extends Phaser.Scene {
       const y = pointer.worldY;
       this.placementPreview.setPosition(x, y);
 
-      const isValid = y <= 520;
+      const isValid = y <= TOOLBAR_TOP;
       if (isValid) {
         this.placementPreview.clearTint();
         this.placementPreview.setAlpha(0.6);
@@ -91,8 +92,10 @@ export default class Demo extends Phaser.Scene {
         dragX: number,
         dragY: number
       ) => {
-        gameObject.x = dragX;
-        gameObject.y = dragY;
+        if (gameObject !== this.pet || this.uiBlocked) return;
+
+        const { x, y } = this.getClampedPetPosition(dragX, dragY);
+        gameObject.setPosition(x, y);
       }
     );
 
@@ -151,6 +154,16 @@ export default class Demo extends Phaser.Scene {
     this.uiBlocked = false;
 
     this.uiReady();
+  }
+
+  private getClampedPetPosition(x: number, y: number) {
+    const halfWidth = this.pet.displayWidth / 2;
+    const halfHeight = this.pet.displayHeight / 2;
+
+    return {
+      x: Phaser.Math.Clamp(x, halfWidth, GAME_WIDTH - halfWidth),
+      y: Phaser.Math.Clamp(y, halfHeight, Math.min(TOOLBAR_TOP, GAME_HEIGHT) - halfHeight)
+    };
   }
 
   private bindKeyboardShortcuts() {
@@ -386,7 +399,7 @@ export default class Demo extends Phaser.Scene {
     const worldY = pointer.worldY;
 
     // Prevent placing items over the bottom UI bar.
-    if (worldY > 520) {
+    if (worldY > TOOLBAR_TOP) {
       this.hintText?.setText('Place it above the toolbar.');
       this.hintText?.setAlpha(1);
       this.time.delayedCall(1000, () => {
