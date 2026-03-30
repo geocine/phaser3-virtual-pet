@@ -58,11 +58,12 @@ export default class Demo extends Phaser.Scene {
     const onPointerMove = (pointer: Phaser.Input.Pointer) => {
       if (!this.selectedItem || this.uiBlocked || !this.placementPreview) return;
 
-      const x = pointer.worldX;
-      const y = pointer.worldY;
+      const { x, y, isValid } = this.getPlacementTarget(
+        pointer.worldX,
+        pointer.worldY
+      );
       this.placementPreview.setPosition(x, y);
 
-      const isValid = y <= TOOLBAR_TOP;
       if (isValid) {
         this.placementPreview.clearTint();
         this.placementPreview.setAlpha(0.6);
@@ -164,6 +165,28 @@ export default class Demo extends Phaser.Scene {
       x: Phaser.Math.Clamp(x, halfWidth, GAME_WIDTH - halfWidth),
       y: Phaser.Math.Clamp(y, halfHeight, Math.min(TOOLBAR_TOP, GAME_HEIGHT) - halfHeight)
     };
+  }
+
+  private getPlacementTarget(x: number, y: number) {
+    const clampedPosition = this.getClampedPetPosition(x, y);
+
+    return {
+      ...clampedPosition,
+      isValid: clampedPosition.x === x && clampedPosition.y === y
+    };
+  }
+
+  private showInvalidPlacementHint() {
+    this.hintText?.setText('Place it inside the yard.');
+    this.hintText?.setAlpha(1);
+    this.time.delayedCall(1000, () => {
+      if (this.selectedItem) {
+        this.hintText?.setText('Tap on the yard to place it.');
+      } else {
+        this.hintText?.setText('Tap an item (or press 1-4) to select it.');
+      }
+      this.hintText?.setAlpha(1);
+    });
   }
 
   private bindKeyboardShortcuts() {
@@ -394,22 +417,13 @@ export default class Demo extends Phaser.Scene {
   placeItem(pointer: Phaser.Input.Pointer) {
     if (!this.selectedItem || this.uiBlocked) return;
 
-    // Use world coordinates so placement remains correct with scaling / transforms.
-    const worldX = pointer.worldX;
-    const worldY = pointer.worldY;
+    const { x, y, isValid } = this.getPlacementTarget(
+      pointer.worldX,
+      pointer.worldY
+    );
 
-    // Prevent placing items over the bottom UI bar.
-    if (worldY > TOOLBAR_TOP) {
-      this.hintText?.setText('Place it above the toolbar.');
-      this.hintText?.setAlpha(1);
-      this.time.delayedCall(1000, () => {
-        if (this.selectedItem) {
-          this.hintText?.setText('Tap on the yard to place it.');
-        } else {
-          this.hintText?.setText('Tap an item (or press 1-4) to select it.');
-        }
-        this.hintText?.setAlpha(1);
-      });
+    if (!isValid) {
+      this.showInvalidPlacementHint();
       return;
     }
 
@@ -420,8 +434,8 @@ export default class Demo extends Phaser.Scene {
     }
 
     const placedItem = this.add.sprite(
-      worldX,
-      worldY,
+      x,
+      y,
       this.selectedItem.texture.key
     );
 
@@ -430,8 +444,8 @@ export default class Demo extends Phaser.Scene {
     this.tweens.add({
       targets: this.pet,
       duration: 500,
-      x: worldX,
-      y: worldY,
+      x,
+      y,
       paused: false,
       onComplete: () => {
         placedItem.destroy();
