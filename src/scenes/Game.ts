@@ -11,20 +11,22 @@ interface SpriteWithStats extends GameObjects.Sprite {
 }
 
 export default class Demo extends Phaser.Scene {
-  private stats: Stats;
-  private decayRates: Stats;
-  private maxStats: Stats;
-  private pet: GameObjects.Sprite;
-  private buttons: SpriteWithStats[];
-  private uiBlocked: boolean;
-  private healthText: GameObjects.Text;
-  private funText: GameObjects.Text;
-  private hintText: GameObjects.Text;
-  private healthHudWidth: number;
-  private selectedItem: SpriteWithStats | null;
-  private placementPreview: GameObjects.Sprite | null;
+  private stats!: Stats;
+  private decayRates!: Stats;
+  private maxStats!: Stats;
+  private pet!: GameObjects.Sprite;
+  private buttons!: SpriteWithStats[];
+  private uiBlocked!: boolean;
+  private healthText!: GameObjects.Text;
+  private funText!: GameObjects.Text;
+  private hintText!: GameObjects.Text;
+  private healthHudWidth!: number;
+  private selectedItem!: SpriteWithStats | null;
+  private placementPreview!: GameObjects.Sprite | null;
   private decayTimer?: Phaser.Time.TimerEvent;
-  private pausedByBlur: boolean;
+  private pausedByBlur!: boolean;
+  private petDragConsumed!: boolean;
+  private nextPetAt!: number;
 
   constructor() {
     super('GameScene');
@@ -48,6 +50,8 @@ export default class Demo extends Phaser.Scene {
 
     this.pausedByBlur = false;
     this.placementPreview = null;
+    this.petDragConsumed = false;
+    this.nextPetAt = 0;
   }
 
   create() {
@@ -79,26 +83,47 @@ export default class Demo extends Phaser.Scene {
       this.input.off('pointermove', onPointerMove);
     });
 
-    this.pet = this.add.sprite(100, 200, 'pet').setInteractive();
+    this.pet = this.add.sprite(100, 200, 'pet').setInteractive({
+      useHandCursor: true
+    });
     // this.pet.depth = 1;
     // make pet draggable
     this.input.setDraggable(this.pet);
 
-    // follow pointer (mouse/finger) when dragging
-    this.input.on(
-      'drag',
-      (
-        _: Phaser.Input.Pointer,
-        gameObject: Phaser.GameObjects.Sprite,
-        dragX: number,
-        dragY: number
-      ) => {
-        if (gameObject !== this.pet || this.uiBlocked) return;
+    this.pet.on('pointerdown', () => {
+      this.petDragConsumed = false;
+    });
 
-        const { x, y } = this.getClampedPetPosition(dragX, dragY);
-        gameObject.setPosition(x, y);
-      }
-    );
+    this.pet.on('pointerup', () => {
+      if (this.petDragConsumed) return;
+
+      this.petPet();
+    });
+
+    // follow pointer (mouse/finger) when dragging
+    const onPetDrag = (
+      _: Phaser.Input.Pointer,
+      gameObject: Phaser.GameObjects.Sprite,
+      dragX: number,
+      dragY: number
+    ) => {
+      if (gameObject !== this.pet || this.uiBlocked) return;
+
+      const { x, y } = this.getClampedPetPosition(dragX, dragY);
+      gameObject.setPosition(x, y);
+    };
+
+    const onPetDragStart = (
+      _: Phaser.Input.Pointer,
+      gameObject: Phaser.GameObjects.Sprite
+    ) => {
+      if (gameObject !== this.pet) return;
+
+      this.petDragConsumed = true;
+    };
+
+    this.input.on('drag', onPetDrag);
+    this.input.on('dragstart', onPetDragStart);
 
     this.createUi();
 
@@ -122,6 +147,8 @@ export default class Demo extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off(Phaser.Core.Events.BLUR, this.onBlur, this);
       this.game.events.off(Phaser.Core.Events.FOCUS, this.onFocus, this);
+      this.input.off('drag', onPetDrag);
+      this.input.off('dragstart', onPetDragStart);
     });
   }
 
@@ -349,6 +376,26 @@ export default class Demo extends Phaser.Scene {
     });
 
     console.log('game over');
+  }
+
+  private petPet() {
+    if (this.uiBlocked || this.selectedItem || this.pausedByBlur) return;
+    if (this.time.now < this.nextPetAt) return;
+
+    this.nextPetAt = this.time.now + 600;
+    this.updateStats({ fun: 4 });
+
+    this.tweens.killTweensOf(this.pet);
+    this.pet.setScale(1);
+
+    this.tweens.add({
+      targets: this.pet,
+      duration: 110,
+      scaleX: 1.08,
+      scaleY: 0.92,
+      yoyo: true,
+      ease: 'Quad.Out'
+    });
   }
 
   rotatePet(rotate: SpriteWithStats) {
