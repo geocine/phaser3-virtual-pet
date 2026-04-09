@@ -216,6 +216,84 @@ export default class Demo extends Phaser.Scene {
     });
   }
 
+  private getPlacedItemMoveConfig(targetX: number, targetY: number) {
+    const dx = targetX - this.pet.x;
+    const dy = targetY - this.pet.y;
+    const distance = Phaser.Math.Distance.Between(
+      this.pet.x,
+      this.pet.y,
+      targetX,
+      targetY
+    );
+    const directionX = distance > 0 ? dx / distance : 0;
+    const directionY = distance > 0 ? dy / distance : 0;
+    const anticipationDistance = Phaser.Math.Clamp(distance * 0.12, 0, 12);
+
+    return {
+      anticipationDistance,
+      anticipationDuration: Phaser.Math.Clamp(40 + distance * 0.08, 40, 85),
+      anticipationX: this.pet.x - directionX * anticipationDistance,
+      anticipationY: this.pet.y - directionY * anticipationDistance + 4,
+      hopHeight: Phaser.Math.Clamp(distance * 0.08, 6, 20),
+      travelDuration: Phaser.Math.Clamp(140 + distance * 1.2, 160, 520)
+    };
+  }
+
+  private movePetToPlacedItem(
+    targetX: number,
+    targetY: number,
+    onComplete: () => void
+  ) {
+    const moveConfig = this.getPlacedItemMoveConfig(targetX, targetY);
+    const startTravel = () => {
+      const startX = this.pet.x;
+      const startY = this.pet.y;
+
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: moveConfig.travelDuration,
+        ease: 'Cubic.Out',
+        onUpdate: (tween) => {
+          const progress = tween.getValue();
+          const baseX = Phaser.Math.Linear(startX, targetX, progress);
+          const baseY = Phaser.Math.Linear(startY, targetY, progress);
+          const hop =
+            Math.sin(progress * Math.PI) * moveConfig.hopHeight;
+          const stretch = moveConfig.hopHeight > 0
+            ? hop / moveConfig.hopHeight
+            : 0;
+
+          this.pet.setPosition(baseX, baseY - hop);
+          this.pet.setScale(1 + stretch * 0.05, 1 - stretch * 0.05);
+        },
+        onComplete: () => {
+          this.pet.setPosition(targetX, targetY);
+          this.pet.setScale(1);
+          onComplete();
+        }
+      });
+    };
+
+    this.tweens.killTweensOf(this.pet);
+
+    if (moveConfig.anticipationDistance < 1) {
+      startTravel();
+      return;
+    }
+
+    this.tweens.add({
+      targets: this.pet,
+      duration: moveConfig.anticipationDuration,
+      x: moveConfig.anticipationX,
+      y: moveConfig.anticipationY,
+      scaleX: 0.95,
+      scaleY: 1.05,
+      ease: 'Quad.Out',
+      onComplete: startTravel
+    });
+  }
+
   private bindKeyboardShortcuts() {
     const keyboard = this.input.keyboard;
     if (!keyboard) return;
@@ -488,33 +566,26 @@ export default class Demo extends Phaser.Scene {
 
     this.uiBlocked = true;
 
-    this.tweens.add({
-      targets: this.pet,
-      duration: 500,
-      x,
-      y,
-      paused: false,
-      onComplete: () => {
-        placedItem.destroy();
-        const finishEating = () => {
-          this.pet.setFrame(0);
-          this.uiReady();
-          this.refreshHud();
-        };
+    this.movePetToPlacedItem(x, y, () => {
+      placedItem.destroy();
+      const finishEating = () => {
+        this.pet.setFrame(0);
+        this.uiReady();
+        this.refreshHud();
+      };
 
-        // clear UI
-        this.updateStats(this.selectedItem?.customStats || {});
+      // clear UI
+      this.updateStats(this.selectedItem?.customStats || {});
 
-        this.pet.once(
-          Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'funnyfaces',
-          finishEating
-        );
-        this.pet.play('funnyfaces');
+      this.pet.once(
+        Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + 'funnyfaces',
+        finishEating
+      );
+      this.pet.play('funnyfaces');
 
-        // Fallback if the animation didn't start (e.g., missing key)
-        if (!this.pet.anims.isPlaying) {
-          finishEating();
-        }
+      // Fallback if the animation didn't start (e.g., missing key)
+      if (!this.pet.anims.isPlaying) {
+        finishEating();
       }
     });
   }
