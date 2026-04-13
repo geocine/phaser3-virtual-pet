@@ -24,7 +24,10 @@ export default class Demo extends Phaser.Scene {
   private selectedItem!: SpriteWithStats | null;
   private placementPreview!: GameObjects.Sprite | null;
   private decayTimer?: Phaser.Time.TimerEvent;
+  private idleTimer?: Phaser.Time.TimerEvent;
+  private idleTween?: Phaser.Tweens.Tween;
   private pausedByBlur!: boolean;
+  private isPetDragging!: boolean;
   private petDragConsumed!: boolean;
   private nextPetAt!: number;
 
@@ -49,6 +52,7 @@ export default class Demo extends Phaser.Scene {
     };
 
     this.pausedByBlur = false;
+    this.isPetDragging = false;
     this.placementPreview = null;
     this.petDragConsumed = false;
     this.nextPetAt = 0;
@@ -119,11 +123,24 @@ export default class Demo extends Phaser.Scene {
     ) => {
       if (gameObject !== this.pet) return;
 
+      this.stopIdleMotion();
+      this.isPetDragging = true;
       this.petDragConsumed = true;
+    };
+
+    const onPetDragEnd = (
+      _: Phaser.Input.Pointer,
+      gameObject: Phaser.GameObjects.Sprite
+    ) => {
+      if (gameObject !== this.pet) return;
+
+      this.isPetDragging = false;
+      this.scheduleIdleMotion();
     };
 
     this.input.on('drag', onPetDrag);
     this.input.on('dragstart', onPetDragStart);
+    this.input.on('dragend', onPetDragEnd);
 
     this.createUi();
 
@@ -140,6 +157,8 @@ export default class Demo extends Phaser.Scene {
       }
     });
 
+    this.scheduleIdleMotion();
+
     // Pause stat decay when the tab/app loses focus.
     this.game.events.on(Phaser.Core.Events.BLUR, this.onBlur, this);
     this.game.events.on(Phaser.Core.Events.FOCUS, this.onFocus, this);
@@ -149,6 +168,66 @@ export default class Demo extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.FOCUS, this.onFocus, this);
       this.input.off('drag', onPetDrag);
       this.input.off('dragstart', onPetDragStart);
+      this.input.off('dragend', onPetDragEnd);
+      this.stopIdleMotion();
+    });
+  }
+
+  private canPetIdle() {
+    return (
+      !this.uiBlocked &&
+      !this.selectedItem &&
+      !this.pausedByBlur &&
+      !this.isPetDragging
+    );
+  }
+
+  private stopIdleMotion() {
+    this.idleTimer?.remove(false);
+    this.idleTimer = undefined;
+
+    this.idleTween?.stop();
+    this.idleTween = undefined;
+  }
+
+  private scheduleIdleMotion() {
+    this.stopIdleMotion();
+
+    if (!this.canPetIdle()) return;
+
+    this.idleTimer = this.time.delayedCall(
+      Phaser.Math.Between(1400, 2600),
+      () => {
+        this.idleTimer = undefined;
+        this.startIdleMotion();
+      }
+    );
+  }
+
+  private startIdleMotion() {
+    if (!this.canPetIdle()) return;
+
+    const distance = Phaser.Math.Between(18, 42);
+    const target = this.getClampedPetPosition(
+      this.pet.x + Phaser.Math.Between(-distance, distance),
+      this.pet.y + Phaser.Math.Between(-18, 18)
+    );
+
+    if (target.x === this.pet.x && target.y === this.pet.y) {
+      this.scheduleIdleMotion();
+      return;
+    }
+
+    this.idleTween = this.tweens.add({
+      targets: this.pet,
+      x: target.x,
+      y: target.y,
+      duration: Phaser.Math.Between(900, 1400),
+      ease: 'Sine.InOut',
+      onComplete: () => {
+        this.idleTween = undefined;
+        this.scheduleIdleMotion();
+      }
     });
   }
 
@@ -333,6 +412,8 @@ export default class Demo extends Phaser.Scene {
     // Avoid re-pausing if we already paused due to blur.
     if (this.pausedByBlur) return;
 
+    this.stopIdleMotion();
+
     if (this.decayTimer) {
       this.decayTimer.paused = true;
     }
@@ -358,6 +439,7 @@ export default class Demo extends Phaser.Scene {
       this.hintText?.setText('Tap an item (or press 1-4) to select it.');
     }
     this.hintText?.setAlpha(1);
+    this.scheduleIdleMotion();
   }
 
   createHud() {
@@ -443,6 +525,7 @@ export default class Demo extends Phaser.Scene {
 
   gameOver() {
     this.uiBlocked = true;
+    this.stopIdleMotion();
     this.pet.setFrame(4);
 
     this.time.addEvent({
@@ -463,7 +546,7 @@ export default class Demo extends Phaser.Scene {
     this.nextPetAt = this.time.now + 600;
     this.updateStats({ fun: 4 });
 
-    this.tweens.killTweensOf(this.pet);
+    this.stopIdleMotion();
     this.pet.setScale(1);
 
     this.tweens.add({
@@ -472,7 +555,11 @@ export default class Demo extends Phaser.Scene {
       scaleX: 1.08,
       scaleY: 0.92,
       yoyo: true,
-      ease: 'Quad.Out'
+      ease: 'Quad.Out',
+      onComplete: () => {
+        this.pet.setScale(1);
+        this.scheduleIdleMotion();
+      }
     });
   }
 
@@ -481,6 +568,7 @@ export default class Demo extends Phaser.Scene {
     if (this.uiBlocked) return;
 
     this.uiReady();
+    this.stopIdleMotion();
 
     this.uiBlocked = true;
 
@@ -519,6 +607,7 @@ export default class Demo extends Phaser.Scene {
     }
 
     this.uiReady();
+    this.stopIdleMotion();
 
     this.selectedItem = item;
 
@@ -564,6 +653,7 @@ export default class Demo extends Phaser.Scene {
       this.selectedItem.texture.key
     );
 
+    this.stopIdleMotion();
     this.uiBlocked = true;
 
     this.movePetToPlacedItem(x, y, () => {
@@ -589,6 +679,7 @@ export default class Demo extends Phaser.Scene {
       }
     });
   }
+
   uiReady() {
     this.selectedItem = null;
 
@@ -605,5 +696,6 @@ export default class Demo extends Phaser.Scene {
     }
 
     this.uiBlocked = false;
+    this.scheduleIdleMotion();
   }
 }
