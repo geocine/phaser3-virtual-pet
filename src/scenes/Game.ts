@@ -1,6 +1,8 @@
 import Phaser, { GameObjects } from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TOOLBAR_TOP } from '../config';
 
+const PET_DRAG_THRESHOLD = 8;
+
 interface Stats {
   health?: number;
   fun?: number;
@@ -90,11 +92,12 @@ export default class Demo extends Phaser.Scene {
     this.pet = this.add.sprite(100, 200, 'pet').setInteractive({
       useHandCursor: true
     });
-    // this.pet.depth = 1;
-    // make pet draggable
+    this.input.dragDistanceThreshold = PET_DRAG_THRESHOLD;
     this.input.setDraggable(this.pet);
 
     this.pet.on('pointerdown', () => {
+      if (this.uiBlocked) return;
+
       this.petDragConsumed = false;
     });
 
@@ -122,6 +125,11 @@ export default class Demo extends Phaser.Scene {
       gameObject: Phaser.GameObjects.Sprite
     ) => {
       if (gameObject !== this.pet) return;
+      if (this.uiBlocked) {
+        this.isPetDragging = false;
+        this.petDragConsumed = false;
+        return;
+      }
 
       this.stopIdleMotion();
       this.isPetDragging = true;
@@ -258,9 +266,17 @@ export default class Demo extends Phaser.Scene {
 
     this.buttons = [appleButton, candyButton, toyButton, rotateButton];
 
-    this.uiBlocked = false;
-
     this.uiReady();
+  }
+
+  private setUiBlocked(blocked: boolean) {
+    this.uiBlocked = blocked;
+    this.input.setDraggable(this.pet, !blocked);
+
+    if (blocked) {
+      this.isPetDragging = false;
+      this.petDragConsumed = false;
+    }
   }
 
   private getClampedPetPosition(x: number, y: number) {
@@ -524,7 +540,7 @@ export default class Demo extends Phaser.Scene {
   }
 
   gameOver() {
-    this.uiBlocked = true;
+    this.setUiBlocked(true);
     this.stopIdleMotion();
     this.pet.setFrame(4);
 
@@ -570,7 +586,7 @@ export default class Demo extends Phaser.Scene {
     this.uiReady();
     this.stopIdleMotion();
 
-    this.uiBlocked = true;
+    this.setUiBlocked(true);
 
     rotate.alpha = 0.5;
 
@@ -654,7 +670,7 @@ export default class Demo extends Phaser.Scene {
     );
 
     this.stopIdleMotion();
-    this.uiBlocked = true;
+    this.setUiBlocked(true);
 
     this.movePetToPlacedItem(x, y, () => {
       placedItem.destroy();
@@ -695,7 +711,7 @@ export default class Demo extends Phaser.Scene {
       this.buttons[i].alpha = 1;
     }
 
-    this.uiBlocked = false;
+    this.setUiBlocked(false);
     this.scheduleIdleMotion();
   }
 }
