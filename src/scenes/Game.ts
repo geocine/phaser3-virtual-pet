@@ -2,6 +2,8 @@ import Phaser, { GameObjects } from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TOOLBAR_TOP } from '../config';
 
 const PET_DRAG_THRESHOLD = 8;
+const PET_KEYBOARD_SPEED = 220;
+const PET_IDLE_RESUME_DELAY = 450;
 
 interface Stats {
   health?: number;
@@ -30,8 +32,17 @@ export default class Demo extends Phaser.Scene {
   private idleTween?: Phaser.Tweens.Tween;
   private pausedByBlur!: boolean;
   private isPetDragging!: boolean;
+  private isPetKeyboardMoving!: boolean;
   private petDragConsumed!: boolean;
   private nextPetAt!: number;
+  private petMoveKeys?:
+    | (Phaser.Types.Input.Keyboard.CursorKeys & {
+        W: Phaser.Input.Keyboard.Key;
+        A: Phaser.Input.Keyboard.Key;
+        S: Phaser.Input.Keyboard.Key;
+        D: Phaser.Input.Keyboard.Key;
+      })
+    | undefined;
 
   constructor() {
     super('GameScene');
@@ -55,6 +66,7 @@ export default class Demo extends Phaser.Scene {
 
     this.pausedByBlur = false;
     this.isPetDragging = false;
+    this.isPetKeyboardMoving = false;
     this.placementPreview = null;
     this.petDragConsumed = false;
     this.nextPetAt = 0;
@@ -199,12 +211,16 @@ export default class Demo extends Phaser.Scene {
   }
 
   private scheduleIdleMotion() {
+    this.scheduleIdleMotionAfter();
+  }
+
+  private scheduleIdleMotionAfter(delay = Phaser.Math.Between(1400, 2600)) {
     this.stopIdleMotion();
 
     if (!this.canPetIdle()) return;
 
     this.idleTimer = this.time.delayedCall(
-      Phaser.Math.Between(1400, 2600),
+      delay,
       () => {
         this.idleTimer = undefined;
         this.startIdleMotion();
@@ -403,6 +419,21 @@ export default class Demo extends Phaser.Scene {
   private bindKeyboardShortcuts() {
     const keyboard = this.input.keyboard;
     if (!keyboard) return;
+    this.petMoveKeys = keyboard.addKeys({
+      up: Phaser.Input.Keyboard.KeyCodes.UP,
+      down: Phaser.Input.Keyboard.KeyCodes.DOWN,
+      left: Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      W: Phaser.Input.Keyboard.KeyCodes.W,
+      A: Phaser.Input.Keyboard.KeyCodes.A,
+      S: Phaser.Input.Keyboard.KeyCodes.S,
+      D: Phaser.Input.Keyboard.KeyCodes.D
+    }) as Phaser.Types.Input.Keyboard.CursorKeys & {
+      W: Phaser.Input.Keyboard.Key;
+      A: Phaser.Input.Keyboard.Key;
+      S: Phaser.Input.Keyboard.Key;
+      D: Phaser.Input.Keyboard.Key;
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (this.uiBlocked) return;
@@ -433,6 +464,46 @@ export default class Demo extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       keyboard.off('keydown', onKeyDown);
     });
+  }
+
+  update(_: number, delta: number) {
+    this.updatePetKeyboardMovement(delta);
+  }
+
+  private updatePetKeyboardMovement(delta: number) {
+    if (!this.petMoveKeys) return;
+
+    const horizontal =
+      Number(this.petMoveKeys.right.isDown || this.petMoveKeys.D.isDown) -
+      Number(this.petMoveKeys.left.isDown || this.petMoveKeys.A.isDown);
+    const vertical =
+      Number(this.petMoveKeys.down.isDown || this.petMoveKeys.S.isDown) -
+      Number(this.petMoveKeys.up.isDown || this.petMoveKeys.W.isDown);
+    const isTryingToMove = horizontal !== 0 || vertical !== 0;
+    const canMove = this.canPetIdle();
+
+    if (!canMove || !isTryingToMove) {
+      if (!this.isPetKeyboardMoving) return;
+
+      this.isPetKeyboardMoving = false;
+      this.scheduleIdleMotionAfter(PET_IDLE_RESUME_DELAY);
+      return;
+    }
+
+    if (!this.isPetKeyboardMoving) {
+      this.stopIdleMotion();
+      this.isPetKeyboardMoving = true;
+    }
+
+    const movement = new Phaser.Math.Vector2(horizontal, vertical)
+      .normalize()
+      .scale((PET_KEYBOARD_SPEED * delta) / 1000);
+    const { x, y } = this.getClampedPetPosition(
+      this.pet.x + movement.x,
+      this.pet.y + movement.y
+    );
+
+    this.pet.setPosition(x, y);
   }
 
   private onBlur() {
