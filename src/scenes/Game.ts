@@ -271,9 +271,20 @@ export default class Demo extends Phaser.Scene {
 
   private setUiBlocked(blocked: boolean) {
     this.uiBlocked = blocked;
-    this.input.setDraggable(this.pet, !blocked);
+    this.syncPetDragState();
 
     if (blocked) {
+      this.isPetDragging = false;
+      this.petDragConsumed = false;
+    }
+  }
+
+  private syncPetDragState() {
+    const canDragPet = !this.uiBlocked && !this.selectedItem;
+
+    this.input.setDraggable(this.pet, canDragPet);
+
+    if (!canDragPet) {
       this.isPetDragging = false;
       this.petDragConsumed = false;
     }
@@ -626,6 +637,7 @@ export default class Demo extends Phaser.Scene {
     this.stopIdleMotion();
 
     this.selectedItem = item;
+    this.syncPetDragState();
 
     if (this.placementPreview) {
       this.placementPreview.destroy();
