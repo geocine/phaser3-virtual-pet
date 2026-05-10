@@ -4,6 +4,7 @@ import { GAME_HEIGHT, GAME_WIDTH, TOOLBAR_TOP } from '../config';
 const PET_DRAG_THRESHOLD = 8;
 const PET_KEYBOARD_SPEED = 220;
 const PET_IDLE_RESUME_DELAY = 450;
+const ITEM_PLACEMENT_PET_BUFFER = 48;
 
 interface Stats {
   health?: number;
@@ -318,15 +319,28 @@ export default class Demo extends Phaser.Scene {
 
   private getPlacementTarget(x: number, y: number) {
     const clampedPosition = this.getClampedPetPosition(x, y);
+    const isInsideYard = clampedPosition.x === x && clampedPosition.y === y;
+    const minDistanceFromPet =
+      this.pet.displayWidth * 0.35 + ITEM_PLACEMENT_PET_BUFFER;
+    const isTooCloseToPet =
+      Phaser.Math.Distance.Between(
+        clampedPosition.x,
+        clampedPosition.y,
+        this.pet.x,
+        this.pet.y
+      ) < minDistanceFromPet;
 
     return {
       ...clampedPosition,
-      isValid: clampedPosition.x === x && clampedPosition.y === y
+      isValid: isInsideYard && !isTooCloseToPet,
+      isTooCloseToPet
     };
   }
 
-  private showInvalidPlacementHint() {
-    this.hintText?.setText('Place it inside the yard.');
+  private showInvalidPlacementHint(isTooCloseToPet = false) {
+    this.hintText?.setText(
+      isTooCloseToPet ? 'Give your pet a little space.' : 'Place it inside the yard.'
+    );
     this.hintText?.setAlpha(1);
     this.time.delayedCall(1000, () => {
       if (this.selectedItem) {
@@ -730,13 +744,13 @@ export default class Demo extends Phaser.Scene {
   placeItem(pointer: Phaser.Input.Pointer) {
     if (!this.selectedItem || this.uiBlocked) return;
 
-    const { x, y, isValid } = this.getPlacementTarget(
+    const { x, y, isValid, isTooCloseToPet } = this.getPlacementTarget(
       pointer.worldX,
       pointer.worldY
     );
 
     if (!isValid) {
-      this.showInvalidPlacementHint();
+      this.showInvalidPlacementHint(isTooCloseToPet);
       return;
     }
 
