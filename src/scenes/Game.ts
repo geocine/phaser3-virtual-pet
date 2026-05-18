@@ -82,7 +82,8 @@ export default class Demo extends Phaser.Scene {
 
       const { x, y, isValid } = this.getPlacementTarget(
         pointer.worldX,
-        pointer.worldY
+        pointer.worldY,
+        this.placementPreview
       );
       this.placementPreview.setPosition(x, y);
 
@@ -306,18 +307,41 @@ export default class Demo extends Phaser.Scene {
     }
   }
 
-  private getClampedPetPosition(x: number, y: number) {
-    const halfWidth = this.pet.displayWidth / 2;
-    const halfHeight = this.pet.displayHeight / 2;
-
+  private getClampedPosition(
+    x: number,
+    y: number,
+    halfWidth: number,
+    halfHeight: number
+  ) {
     return {
       x: Phaser.Math.Clamp(x, halfWidth, GAME_WIDTH - halfWidth),
       y: Phaser.Math.Clamp(y, halfHeight, Math.min(TOOLBAR_TOP, GAME_HEIGHT) - halfHeight)
     };
   }
 
-  private getPlacementTarget(x: number, y: number) {
-    const clampedPosition = this.getClampedPetPosition(x, y);
+  private getClampedSpritePosition(
+    x: number,
+    y: number,
+    sprite: GameObjects.Sprite
+  ) {
+    return this.getClampedPosition(
+      x,
+      y,
+      sprite.displayWidth / 2,
+      sprite.displayHeight / 2
+    );
+  }
+
+  private getClampedPetPosition(x: number, y: number) {
+    return this.getClampedSpritePosition(x, y, this.pet);
+  }
+
+  private getPlacementTarget(
+    x: number,
+    y: number,
+    sprite: GameObjects.Sprite
+  ) {
+    const clampedPosition = this.getClampedSpritePosition(x, y, sprite);
 
     return {
       ...clampedPosition,
@@ -732,7 +756,8 @@ export default class Demo extends Phaser.Scene {
 
     const { x, y, isValid } = this.getPlacementTarget(
       pointer.worldX,
-      pointer.worldY
+      pointer.worldY,
+      this.placementPreview ?? this.selectedItem
     );
 
     if (!isValid) {
